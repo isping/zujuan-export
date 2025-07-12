@@ -5,6 +5,7 @@
 // @description  从组卷网提取试卷内容并导出为Word，支持图片处理
 // @icon         https://toolb.cn/favicon/zujuan.xkw.com
 // @author       pansoul
+// @license      MIT
 // @match        https://zujuan.xkw.com/zujuan/*
 // @grant        GM_addStyle
 // @grant        GM_setClipboard
