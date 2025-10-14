@@ -13,6 +13,9 @@
 // @grant        GM_xmlhttpRequest
 // @connect      staticzujuan.xkw.com
 // @connect      cdn*.xkw.com
+// @connect      img.xkw.com
+// @downloadURL https://update.greasyfork.org/scripts/542406/%E7%BB%84%E5%8D%B7%E7%BD%91%E8%AF%95%E5%8D%B7%E6%8F%90%E5%8F%96.user.js
+// @updateURL https://update.greasyfork.org/scripts/542406/%E7%BB%84%E5%8D%B7%E7%BD%91%E8%AF%95%E5%8D%B7%E6%8F%90%E5%8F%96.meta.js
 // ==/UserScript==
 
 (function() {
@@ -186,8 +189,8 @@
             title: paperTitle,
             sections: [],
             options: {
-                includeAnswers: true,
-                includeExplanations: true,
+                includeAnswers: false,
+                includeExplanations: false,
                 downloadImages,
                 formatEquations
             }
@@ -257,20 +260,36 @@
                 }
 
                 const images = [];
-                if (downloadImages) {
-                    const imgElements = question.querySelectorAll('img');
-                    imgElements.forEach(img => {
-                        if (img.src && !img.src.startsWith('data:')) {
-                            images.push({
-                                src: img.src,
-                                alt: img.alt || '',
-                                width: img.width || 0,
-                                height: img.height || 0
-                            });
-                        }
-                    });
-                }
+				const imgElements = question.querySelectorAll('img');
 
+				imgElements.forEach(img => {
+					if (img.src && !img.src.startsWith('data:')) {
+						const naturalWidth = img.naturalWidth || 0;
+						const naturalHeight = img.naturalHeight || 0;
+						
+						// 打印尺寸信息（总是执行）
+						console.log('图片信息:', {
+							源地址: img.src,
+							显示尺寸: `${img.width} x ${img.height}`,
+							原始尺寸: `${naturalWidth} x ${naturalHeight}`
+						});
+
+						// 只有在用户选择下载图片时，才将图片信息存入数组
+						images.push({
+								src: img.src,
+								alt: img.alt || '',
+								width: img.width || 0,
+								height: img.height || 0,
+								naturalWidth: naturalWidth,
+								naturalHeight: naturalHeight
+						});
+						
+					}
+				});
+
+                // 不再获取答案和解析
+                const answer = '';
+                const explanation = '';
 
                 currentSection.questions.push({
                     number: qNumber,
@@ -358,7 +377,7 @@
                 }
                 img {
                     max-width: 90%;
-                    display: block;
+                    //display: block;
                     margin: 10px auto;
                 }
                 table {
@@ -396,8 +415,13 @@
             html += `<div class="section-title">${section.index} ${section.type}</div>`;
 
             section.questions.forEach((question, qIndex) => {
+				// 处理题目内容中的图片尺寸
+				let processedContent = processImageSizes(question.content, question);
+				console.log("开始处理内容图片尺寸以前……"+processedContent);
+
                 html += `<div class="question">`;
-                html += `<div class="question-content">${question.number} ${cleanHTML(question.content)}</div>`;
+                html += `<div class="question-content">${question.number}${cleanHTML(processedContent)}</div>`;
+				console.log("将内容添加到html……"+html);
 
                 if (question.options.length > 0) {
                     html += `<div class="options">`;
@@ -414,7 +438,10 @@
                     optionRows.forEach(row => {
                         html += `<tr>`;
                         row.forEach(option => {
-                            html += `<td style="border:none;">${cleanHTML(option)}</td>`;
+							// 也处理选项中的图片尺寸
+							let processedOption = processImageSizes(option, question);
+							console.log("开始处理选项图片尺寸……"+processedOption);
+                            html += `<td style="border:none;">${cleanHTML(processedOption)}</td>`;
                         });
                         if (row.length === 1) {
                             html += `<td style="border:none;"></td>`;
@@ -425,13 +452,7 @@
                     html += `</div>`;
                 }
 
-                if (paperContent.options.includeAnswers && question.answer) {
-                    html += `<div class="answer"><strong>答案：</strong>${cleanHTML(question.answer)}</div>`;
-                }
-
-                if (paperContent.options.includeExplanations && question.explanation) {
-                    html += `<div class="explanation"><strong>解析：</strong>${cleanHTML(question.explanation)}</div>`;
-                }
+                // 不再显示答案和解析
 
                 html += `</div>`;
 
@@ -562,9 +583,61 @@
         </body>
         </html>
         `;
-
+		console.log("返回的html是:"+html);
         return html;
     }
+
+	// 新增函数：根据真实尺寸处理图片尺寸
+	function processImageSizes(html, question) {
+		if (!html) return '';
+		
+		// 创建一个临时DOM元素来处理HTML
+		const tempDiv = document.createElement('div');
+		tempDiv.innerHTML = html;
+		
+		// 获取所有图片元素
+		const imgElements = tempDiv.querySelectorAll('img');
+		console.log("获取所有图片元素"+imgElements);
+		imgElements.forEach(img => {
+			const src = img.src;
+			
+			// 在题目中查找对应的图片信息
+			let imageInfo = null;
+			if (question && question.images) {
+				imageInfo = question.images.find(imgInfo => imgInfo.src === src);
+			}
+			console.log("在题目中查找对应的图片信息.images"+question.images);
+
+			if (imageInfo) {
+				const naturalWidth = imageInfo.naturalWidth || 0;
+				const naturalHeight = imageInfo.naturalHeight || 0;
+				const displayWidth = imageInfo.width || 0;
+				const displayHeight = imageInfo.height || 0;
+				
+				console.log(`处理图片尺寸: ${src}`);
+				console.log(`  原始尺寸: ${naturalWidth} x ${naturalHeight}`);
+				console.log(`  显示尺寸: ${displayWidth} x ${displayHeight}`);
+				
+				// 如果原始尺寸太大（比如超过800px），就使用网页显示尺寸
+				if (naturalWidth > 800 || naturalHeight > 600) {
+					if (displayWidth > 0 && displayHeight > 0) {
+						img.width = displayWidth;
+						img.height = displayHeight;
+						console.log(`  设置为显示尺寸: ${displayWidth} x ${displayHeight}`);
+					}
+				} else {
+					console.log(`  保持原始尺寸: ${naturalWidth} x ${naturalHeight}`);
+				}
+			}
+			
+			// 统一设置显示样式
+			//img.style.display = 'block';
+			img.style.margin = '8px auto';
+			img.style.maxWidth = '100%';
+		});
+		
+		return tempDiv.innerHTML;
+	}
 
 
     function paperToText(paperContent) {
@@ -593,13 +666,7 @@
                     });
                 }
 
-                if (paperContent.options.includeAnswers && question.answer) {
-                    text += `答案：${stripHTML(question.answer)}\n`;
-                }
-
-                if (paperContent.options.includeExplanations && question.explanation) {
-                    text += `解析：${stripHTML(question.explanation)}\n`;
-                }
+                // 不再显示答案和解析
 
                 text += `\n`;
             });
@@ -666,26 +733,7 @@
                 });
 
 
-                if (question.answer) {
-                    question.answer = question.answer.replace(imgRegex, (match, src) => {
-                        const base64 = imageMap.get(src);
-                        if (base64) {
-                            return match.replace(src, base64);
-                        }
-                        return match;
-                    });
-                }
-
-
-                if (question.explanation) {
-                    question.explanation = question.explanation.replace(imgRegex, (match, src) => {
-                        const base64 = imageMap.get(src);
-                        if (base64) {
-                            return match.replace(src, base64);
-                        }
-                        return match;
-                    });
-                }
+                // 不再处理答案和解析中的图片
             });
         });
 
@@ -802,7 +850,9 @@
     function cleanHTML(html) {
         if (!html) return '';
 
-        return html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+//        return html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+		// 只移除完整的 <script> 标签
+		return html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
     }
 
 
