@@ -133,10 +133,10 @@
             <span class="close">&times;</span>
             <h3>试卷导出工具</h3>
             <div class="options">
-                <label><input type="checkbox" id="download-images" checked> 下载Base64内联图片(导出HTML格式)</label>
+                <label><input type="checkbox" id="download-images" checked> 下载图片(Word格式)</label>
                 <label><input type="checkbox" id="format-equations" checked> 格式化公式</label>
             </div>
-            <button id="export-word">导出试卷</button>
+            <button id="export-word">导出为Word</button>
         `;
         document.body.appendChild(exporterPanel);
 
@@ -266,7 +266,7 @@
 					if (img.src && !img.src.startsWith('data:')) {
 						const naturalWidth = img.naturalWidth || 0;
 						const naturalHeight = img.naturalHeight || 0;
-
+						
 						// 打印尺寸信息（总是执行）
 						console.log('图片信息:', {
 							源地址: img.src,
@@ -283,7 +283,7 @@
 								naturalWidth: naturalWidth,
 								naturalHeight: naturalHeight
 						});
-
+						
 					}
 				});
 
@@ -590,17 +590,17 @@
 	// 新增函数：根据真实尺寸处理图片尺寸
 	function processImageSizes(html, question) {
 		if (!html) return '';
-
+		
 		// 创建一个临时DOM元素来处理HTML
 		const tempDiv = document.createElement('div');
 		tempDiv.innerHTML = html;
-
+		
 		// 获取所有图片元素
 		const imgElements = tempDiv.querySelectorAll('img');
 		console.log("获取所有图片元素"+imgElements);
 		imgElements.forEach(img => {
 			const src = img.src;
-
+			
 			// 在题目中查找对应的图片信息
 			let imageInfo = null;
 			if (question && question.images) {
@@ -613,11 +613,11 @@
 				const naturalHeight = imageInfo.naturalHeight || 0;
 				const displayWidth = imageInfo.width || 0;
 				const displayHeight = imageInfo.height || 0;
-
+				
 				console.log(`处理图片尺寸: ${src}`);
 				console.log(`  原始尺寸: ${naturalWidth} x ${naturalHeight}`);
 				console.log(`  显示尺寸: ${displayWidth} x ${displayHeight}`);
-
+				
 				// 如果原始尺寸太大（比如超过800px），就使用网页显示尺寸
 				if (naturalWidth > 800 || naturalHeight > 600) {
 					if (displayWidth > 0 && displayHeight > 0) {
@@ -629,13 +629,13 @@
 					console.log(`  保持原始尺寸: ${naturalWidth} x ${naturalHeight}`);
 				}
 			}
-
+			
 			// 统一设置显示样式
 			//img.style.display = 'block';
 			img.style.margin = '8px auto';
 			img.style.maxWidth = '100%';
 		});
-
+		
 		return tempDiv.innerHTML;
 	}
 
@@ -796,24 +796,9 @@
             case 'word':
                 const html = paperToHTML(paperContent);
 
-            // 如果用户选择了下载图片，就导出为HTML文件
-            if (paperContent.options.downloadImages) {
-                // 导出为HTML文件
-                const htmlBlob = new Blob([html], {type: 'text/html'});
-                const htmlUrl = URL.createObjectURL(htmlBlob);
-
-                const htmlLink = document.createElement('a');
-                htmlLink.href = htmlUrl;
-                htmlLink.download = `${fileName}.html`;
-                document.body.appendChild(htmlLink);
-                htmlLink.click();
-                document.body.removeChild(htmlLink);
-
-                setTimeout(() => URL.revokeObjectURL(htmlUrl), 100);
-            } else {
-                // 没有选择下载图片，仍然导出为DOC文件
                 const blob = new Blob([html], {type: 'text/html'});
                 const url = URL.createObjectURL(blob);
+
 
                 const a = document.createElement('a');
                 a.href = url;
@@ -822,9 +807,9 @@
                 a.click();
                 document.body.removeChild(a);
 
+
                 setTimeout(() => URL.revokeObjectURL(url), 100);
-            }
-            break;
+                break;
 
             case 'txt':
                 const text = paperToText(paperContent);
